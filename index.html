@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Stock & ETF 智能分析工具</title>
     
-    <!-- PWA 相關設定與自訂 Icon -->
+    <!-- PWA 相關設定與自訂 Icon (iOS) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#ffffff">
     <link rel="apple-touch-icon" href="https://i.ibb.co/67Fpn06R/grok-image-38ff8969-e1d9-4592-98d6-1366fb857c2c-image-edit-0-1.jpg">
-    <link rel="icon" type="image/jpeg" href="https://i.ibb.co/67Fpn06R/grok-image-38ff8969-e1d9-4592-98d6-1366fb857c2c-image-edit-0-1.jpg">
+    
+    <!-- PWA Web App Manifest (Android 隱藏網址列的關鍵) -->
+    <!-- 將 manifest 以 JSON 格式編碼並內嵌，設定 display: standalone 來隱藏瀏覽器介面 -->
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Stock%20AI%20%E5%88%86%E6%9E%90%22%2C%22short_name%22%3A%22Stock%20AI%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%23ffffff%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fi.ibb.co%2F67Fpn06R%2Fgrok-image-38ff8969-e1d9-4592-98d6-1366fb857c2c-image-edit-0-1.jpg%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fjpeg%22%7D%2C%7B%22src%22%3A%22https%3A%2F%2Fi.ibb.co%2F67Fpn06R%2Fgrok-image-38ff8969-e1d9-4592-98d6-1366fb857c2c-image-edit-0-1.jpg%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fjpeg%22%7D%5D%7D">
 
     <!-- 引入 Tailwind CSS 與 Typography 插件 -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
