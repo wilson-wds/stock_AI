@@ -123,7 +123,7 @@
             <div class="space-y-4">
                 <div>
                     <label for="apiKeyInput" class="block text-xs font-medium text-slate-700 mb-1">Google Gemini API Key</label>
-                    <input type="password" id="apiKeyInput" placeholder="輸入您的 API Key" 
+                    <input type="password" id="apiKeyInput" placeholder="輸入您的 API Key (AQ. 或 AIza 開頭)" 
                         class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors text-sm font-mono">
                     <p class="text-[10px] text-slate-400 mt-1.5 leading-tight">這把鑰匙將僅安全地儲存於您的手機本地，不會上傳至任何伺服器。</p>
                 </div>
@@ -232,8 +232,8 @@
         // 取得儲存的 API Key 或是設定為空
         let currentApiKey = localStorage.getItem('gemini_api_key') || "";
 
-        // 動態生成 MODEL_URL
-        const getModelUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${currentApiKey}`;
+        // 動態生成 MODEL_URL (使用最穩定支援搜尋的 gemini-1.5-pro，因為 flash 有時會對 tools 格式報錯)
+        const getModelUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${currentApiKey}`;
 
         // DOM 元素
         const apiKeyModal = document.getElementById('apiKeyModal');
@@ -311,20 +311,22 @@
 
         // --- 分析邏輯 ---
 
-        async function fetchWithRetry(url, options, retries = 5) {
-            const delays = [1000, 2000, 4000, 8000, 16000];
+        async function fetchWithRetry(url, options, retries = 3) {
             for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, options);
+                    const data = await response.json();
+                    
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error?.message || `伺服器回應錯誤 (狀態碼: ${response.status})`);
+                        // 嘗試從回應中擷取更詳細的錯誤訊息
+                        const errorMsg = data.error?.message || data.error?.details?.[0]?.message || `伺服器回應錯誤 (狀態碼: ${response.status})`;
+                        throw new Error(errorMsg);
                     }
-                    return await response.json();
+                    return data;
                 } catch (error) {
                     if (i === retries - 1) throw error;
-                    console.log(`連線失敗，${delays[i]/1000} 秒後進行第 ${i + 1} 次重試...`);
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                    console.log(`連線失敗，2秒後進行第 ${i + 1} 次重試...`, error);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
         }
@@ -351,7 +353,8 @@
             copyBtn.classList.add('hidden');
 
             try {
-                const systemPrompt = "你是一位專業的證券分析師與財經助理。接收股票/ETF代號後，請利用 Google 搜尋獲取最新、最準確的資訊。提供客觀資料整理，不給具體買賣建議。請用繁體中文，使用 Markdown (### 標題、條列式或表格) 以便在手機版面上好閱讀，內文精簡扼要，並確保完整產出所有內容，絕不中斷。";
+                // 建構提示詞
+                const systemPrompt = "你是一位專業的證券分析師與財經助理。接收股票/ETF代號後，請務必利用 Google Search 獲取今日最新、最準確的資訊。請用繁體中文，使用 Markdown (### 標題、條列式或表格) 排版，內文精簡扼要，並確保完整產出所有內容，絕不中斷。";
                 
                 const userQuery = `請搜尋「${ticker}」在今日或最近幾天的最新資訊，整理成以下重點：
                 ### 近五日價格走勢
@@ -365,10 +368,13 @@
                 ### 短期走勢預期
                 (總結目前市場對其當日或短線走勢的預期心理反應)`;
 
+                // 修正 payload 格式以符合最新的 API 規範
                 const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    tools: [{ "google_search": {} }],
+                    contents: [{ role: "user", parts: [{ text: userQuery }] }],
+                    systemInstruction: { role: "system", parts: [{ text: systemPrompt }] },
+                    tools: [{
+                        googleSearch: {} // 正確的 Google Search Tool 參數格式
+                    }],
                     generationConfig: {
                         temperature: 0.2,
                         maxOutputTokens: 4096 
@@ -383,56 +389,50 @@
 
                 if (data.candidates && data.candidates.length > 0) {
                     const candidate = data.candidates[0];
+                    
+                    // 檢查是否因為安全機制被阻擋
+                    if (candidate.finishReason === 'SAFETY') {
+                        throw new Error("分析內容觸發了安全過濾機制，無法顯示。");
+                    }
+
                     const text = candidate.content?.parts?.[0]?.text || "無法獲取分析內容。";
                     
-                    const groundingAttributions = candidate.groundingMetadata?.groundingAttributions || [];
-                    const sources = groundingAttributions
-                        .filter(a => a.web && a.web.uri && a.web.title)
-                        .map(a => ({ uri: a.web.uri, title: a.web.title }));
+                    // 解析參考來源 (如果是透過 Google Search 獲取的資料)
+                    const groundingMetadata = candidate.groundingMetadata || {};
+                    const webSearchQueries = groundingMetadata.webSearchQueries || [];
+                    let sourcesText = "";
                     
-                    const uniqueSources = [];
-                    const urls = new Set();
-                    for (const source of sources) {
-                        if (!urls.has(source.uri)) {
-                            urls.add(source.uri);
-                            uniqueSources.push(source);
-                        }
+                    if (webSearchQueries.length > 0) {
+                         sourcesText = "Google 搜尋關鍵字：\n" + webSearchQueries.map(q => `- ${q}`).join('\n');
                     }
 
                     displayTicker.textContent = ticker;
                     reportContent.innerHTML = marked.parse(text); 
                     
-                    if (uniqueSources.length > 0) {
-                        sourcesContainer.classList.remove('hidden');
-                        uniqueSources.forEach(source => {
-                            const li = document.createElement('li');
-                            const a = document.createElement('a');
-                            a.href = source.uri;
-                            a.target = "_blank";
-                            a.className = "text-blue-500 hover:text-blue-700 underline truncate block w-full";
-                            a.textContent = source.title;
-                            li.appendChild(a);
-                            sourcesList.appendChild(li);
-                        });
+                    // 由於最新的 API 有時不會回傳明確的 URL 而是回傳 chunks，我們這裡簡化來源顯示
+                    if (sourcesText) {
+                         sourcesContainer.classList.remove('hidden');
+                         sourcesList.innerHTML = `<li class="text-xs text-slate-400 whitespace-pre-line">${sourcesText}</li>`;
                     }
 
                     showResult();
                 } else {
-                    throw new Error("AI 回應格式未預期或無資料。");
+                    console.log("Unexpected response format:", data);
+                    throw new Error("伺服器回傳的資料格式不正確，請稍後再試。");
                 }
 
             } catch (error) {
-                console.error("Analysis Error:", error);
+                console.error("Analysis Error Details:", error);
                 
-                // 顯示更詳細的錯誤訊息
-                let errorMsg = "無法完成分析，網路不穩定或代號輸入錯誤。";
-                if(error.message.includes("API key not valid") || error.message.includes("400")) {
+                // 顯示明確的錯誤訊息
+                let errorMsg = `無法完成分析。原因：${error.message}`;
+                
+                if(error.message.includes("API key not valid")) {
                      errorMsg = "API Key 錯誤或無效，請點擊右上角齒輪重新設定。";
-                     // 若確認是 Key 無效，可考慮清除錯誤的 Key
-                     // localStorage.removeItem('gemini_api_key');
-                     // currentApiKey = "";
-                } else {
-                     errorMsg = `無法完成分析。原因：${error.message}`;
+                } else if (error.message.includes("400")) {
+                     errorMsg = "請求格式錯誤 (400)。可能是此 API Key 不支援搜尋功能，或輸入內容有誤。詳細：" + error.message;
+                } else if (error.message.includes("403")) {
+                     errorMsg = "權限不足 (403)。可能是此 API Key 被限制使用，或所在地區不支援。";
                 }
                 
                 showError(errorMsg);
