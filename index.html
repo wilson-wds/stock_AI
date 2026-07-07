@@ -423,13 +423,19 @@
 
             } catch (error) {
                 console.error("Analysis Error:", error);
+                
+                // 顯示更詳細的錯誤訊息
+                let errorMsg = "無法完成分析，網路不穩定或代號輸入錯誤。";
                 if(error.message.includes("API key not valid") || error.message.includes("400")) {
-                     showError("API Key 錯誤或無效，請點擊右上角齒輪重新設定。");
-                     localStorage.removeItem('gemini_api_key');
-                     currentApiKey = "";
+                     errorMsg = "API Key 錯誤或無效，請點擊右上角齒輪重新設定。";
+                     // 若確認是 Key 無效，可考慮清除錯誤的 Key
+                     // localStorage.removeItem('gemini_api_key');
+                     // currentApiKey = "";
                 } else {
-                     showError("無法完成分析，網路不穩定或代號輸入錯誤。");
+                     errorMsg = `無法完成分析。原因：${error.message}`;
                 }
+                
+                showError(errorMsg);
                 welcomeScreen.classList.remove('hidden');
             } finally {
                 hideLoading();
