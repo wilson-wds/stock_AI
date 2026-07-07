@@ -232,8 +232,8 @@
         // 取得儲存的 API Key 或是設定為空
         let currentApiKey = localStorage.getItem('gemini_api_key') || "";
 
-        // 動態生成 MODEL_URL (使用最穩定支援搜尋的 gemini-1.5-pro，因為 flash 有時會對 tools 格式報錯)
-        const getModelUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${currentApiKey}`;
+        // 動態生成 MODEL_URL (更新模型名稱為最新的 gemini-2.5-flash，解決 model not found 錯誤)
+        const getModelUrl = () => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentApiKey}`;
 
         // DOM 元素
         const apiKeyModal = document.getElementById('apiKeyModal');
