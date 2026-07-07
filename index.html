@@ -139,7 +139,7 @@
                 <img src="https://i.ibb.co/67Fpn06R/grok-image-38ff8969-e1d9-4592-98d6-1366fb857c2c-image-edit-0-1.jpg" alt="Logo" class="w-8 h-8 rounded-lg shadow-sm object-cover">
                 <div>
                     <h1 class="text-base font-bold text-slate-900 leading-tight">Stock AI 分析</h1>
-                    <p class="text-[10px] text-slate-500 font-medium leading-none mt-0.5">Will Design Studio</p>
+                    <p class="text-[10px] text-slate-500 font-medium leading-none mt-0.5">Well Design Studio</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -316,7 +316,7 @@
 
             try {
                 // 優化提示詞：明確要求完整輸出，並且不允許中斷
-                const systemPrompt = "你是一位專業、不被中斷的證券分析師。請務必利用 Google Search 獲取最新資訊。請你深呼吸，慢慢思考，『完整且詳細』地輸出以下所有要求的內容，絕不可省略或中斷。請使用繁體中文與 Markdown 格式。";
+                const systemPrompt = "你是一位專業、不被中斷的證券分析師。請務必利用 Google Search 獲取最新資訊與歷史數據。請你深呼吸，慢慢思考，『完整且詳細』地輸出以下所有要求的內容，絕不可省略或中斷。請使用繁體中文與 Markdown 格式。對於「年化報酬率」，請盡可能搜尋近三年或五年的歷史回測數據來計算或說明。";
                 
                 const userQuery = `請針對股票代號「${ticker}」，完整回答以下所有項目。每個項目都必須有內容：
 
@@ -329,10 +329,16 @@
 ### 3. 近期重要行程
 (請列出近期是否即將舉辦或剛結束法說會、除權息日、財報公佈日等，沒有則清楚寫明無重大行程)
 
-### 4. 影響漲跌關鍵因素
+### 4. 企業護城河分析
+(請分析該企業的長期競爭優勢，例如：無形資產、轉換成本、網絡效應、成本優勢等，並評估其護城河的強弱)
+
+### 5. 投資年化報酬率 (近3年/5年)
+(請利用搜尋尋找該標的過去 3 年與 5 年的歷史股價與配息數據，計算或提供其「含息年化報酬率」。若無精確數據，請給出概估的區間或市場共識)
+
+### 6. 影響漲跌關鍵因素
 (請分析市場上目前的看多理由與看空理由，包含籌碼面或消息面)
 
-### 5. 短期走勢預期總結
+### 7. 短期走勢預期總結
 (基於上述資訊，給出一段關於該股短線市場心理的客觀總結)`;
 
                 const payload = {
